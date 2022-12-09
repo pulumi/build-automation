@@ -1,0 +1,27 @@
+{
+  "name": "@pulumi/github-workflows",
+  "version": "0.0.1",
+  "description": "Automation to keep Github Actions workflows up to date for Pulumi & third-party repositories",
+  "main": "dist/index.js",
+  "scripts": {
+    "discovery": "wget https://json.schemastore.org/github-workflow.json -O github-workflow.json && json2ts -i github-workflow.json -o src/github-workflow.d.ts --unreachableDefinitions --ignoreMinAndMaxItems",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pulumi/github-workflows.git"
+  },
+  "keywords": [
+    "pulumi",
+    "github-actions"
+  ],
+  "author": "Pulumi",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/pulumi/github-workflows/issues"
+  },
+  "homepage": "https://github.com/pulumi/github-workflows#readme",
+  "dependencies": {
+    "json-schema-to-typescript": "^11.0.2"
+  }
+}
