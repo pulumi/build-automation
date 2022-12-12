@@ -1,1 +1,1 @@
-export * as types from "./github-workflow";
+export * as types from "./types";
