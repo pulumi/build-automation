@@ -1,0 +1,24 @@
+{
+  "name": "@pulumi/github-workflows",
+  "version": "0.0.1",
+  "description": "Automated Github Actions workflow generation for Pulumi & third-party providers",
+  "main": "dist/index.js",
+  "author": "Pulumi",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/pulumi/build-automation#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pulumi/build-automation.git"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "discovery": "wget https://json.schemastore.org/github-workflow.json -O github-workflow.json && json2ts -i github-workflow.json -o src/types.d.ts --unreachableDefinitions --ignoreMinAndMaxItems",
+    "build": "tsc"
+  },
+  "bugs": {
+    "url": "https://github.com/pulumi/build-automation/issues"
+  },
+  "dependencies": {
+    "json-schema-to-typescript": "^11.0.2"
+  }
+}
