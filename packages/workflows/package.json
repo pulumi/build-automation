@@ -1,10 +1,10 @@
 {
   "name": "@pulumi/github-workflows",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Automated Github Actions workflow generation for Pulumi & third-party providers",
   "author": "Pulumi",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/pulumi/build-automation#readme",
+  "homepage": "https://github.com/pulumi/build-automation/tree/main/packages/workflows#readme",
   "main": "dist/index.js",
   "files": [
     "bin/**",
@@ -29,7 +29,7 @@
     "url": "https://github.com/pulumi/build-automation/issues"
   },
   "dependencies": {
-    "@pulumi/build-config": "^0.0.2",
+    "@pulumi/build-config": "^0.0.3",
     "yargs": "^17.6.2"
   },
   "devDependencies": {

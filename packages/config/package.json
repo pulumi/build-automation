@@ -1,11 +1,11 @@
 {
   "name": "@pulumi/build-config",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Build configuration handling",
   "author": "Pulumi",
   "license": "Apache-2.0",
   "main": "dist/index.js",
-  "homepage": "https://github.com/pulumi/build-automation#readme",
+  "homepage": "https://github.com/pulumi/build-automation/tree/main/packages/config#readme",
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc",

@@ -3,7 +3,7 @@
   "description": "Automation to keep Github Actions workflows, makefiles and other build files up to date for Pulumi & third-party repositories",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pulumi/github-workflows.git"
+    "url": "git+https://github.com/pulumi/build-automation.git"
   },
   "private": true,
   "keywords": [
@@ -14,9 +14,9 @@
   "author": "Pulumi",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/pulumi/github-workflows/issues"
+    "url": "https://github.com/pulumi/build-automation/issues"
   },
-  "homepage": "https://github.com/pulumi/github-workflows#readme",
+  "homepage": "https://github.com/pulumi/build-automation#readme",
   "dependencies": {
     "yaml": "^2.1.3"
   },
