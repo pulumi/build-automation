@@ -10,15 +10,23 @@
     "type": "git",
     "url": "git+https://github.com/pulumi/build-automation.git"
   },
+  "bin": {
+    "pulumi-generate-provider-workflows": "bin/cli.js"
+  },
   "scripts": {
     "clean": "rm -rf dist",
-    "discovery": "wget https://json.schemastore.org/github-workflow.json -O github-workflow.json && json2ts -i github-workflow.json -o src/types.d.ts --unreachableDefinitions --ignoreMinAndMaxItems",
+    "discovery": "wget https://json.schemastore.org/github-workflow.json -O github-workflow.json && json2ts -i github-workflow.json -o src/provider/github-workflow.d.ts --unreachableDefinitions --ignoreMinAndMaxItems",
     "build": "tsc"
   },
   "bugs": {
     "url": "https://github.com/pulumi/build-automation/issues"
   },
   "dependencies": {
+    "@pulumi/build-config": "^0.0.1",
+    "yargs": "^17.6.2"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.17",
     "json-schema-to-typescript": "^11.0.2"
   }
 }

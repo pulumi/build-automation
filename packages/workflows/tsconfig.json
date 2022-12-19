@@ -8,5 +8,8 @@
     {
       "path": "../config"
     }
+  ],
+  "exclude": [
+    "dist"
   ]
 }
