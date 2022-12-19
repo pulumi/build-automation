@@ -1,5 +1,5 @@
 import { BridgedConfig } from "@pulumi/build-config";
-import { GithubWorkflow, NormalJob } from "./github-workflow";
+import { GithubWorkflow, NormalJob } from "../github-workflow";
 import * as steps from "./steps";
 import { Step } from "./steps";
 

@@ -1,8 +1,8 @@
-import { GithubWorkflow, NormalJob } from "./github-workflow";
+import { GithubWorkflow, NormalJob } from "../github-workflow";
 import { ProviderFile } from "./index";
 import * as steps from "./steps";
 import { Step } from "./steps";
-import * as action from "./action-versions";
+import * as action from "../action-versions";
 
 const pythonVersion = "3.9";
 const goVersion = "1.19.x";

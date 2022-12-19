@@ -3,8 +3,8 @@ import * as path from "path";
 import * as yaml from "yaml";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { ProviderFile } from "../provider";
-import { generateExamplesFiles } from "../provider/examples";
+import { ProviderFile } from "../provider/bridged";
+import { generateExamplesFiles } from "../provider/bridged/examples";
 
 const args = yargs(hideBin(process.argv))
   .command("generate-examples", "generate examples files")
