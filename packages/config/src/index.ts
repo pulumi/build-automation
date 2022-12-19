@@ -51,7 +51,19 @@ const BridgedConfig = z
     };
   });
 
+export const NativeConfig = z.object({
+  provider: z.string(),
+  "provider-default-branch": z.string().default("master"),
+  "golangci-timeout": z.string().default("20m"),
+  "major-version": z.number().default(0),
+  customLdFlag: z.string().default(""),
+  skipWindowsArmBuild: z.boolean().default(false),
+});
+
+  
 export type BridgedConfig = z.TypeOf<typeof BridgedConfig>;
+export type NativeConfig = z.TypeOf<typeof NativeConfig>;
+
 export const Config = z.union([BridgedConfig, ExamplesConfig]);
 export type Config = z.TypeOf<typeof Config>;
 
@@ -79,3 +91,32 @@ export const getConfig = (provider: string): Config => {
   const content = fs.readFileSync(configPath, { encoding: "utf-8" });
   return parseConfig(content);
 };
+
+export const WorkflowOpts = z.object({
+  provider: z.string(),
+  env: z.record(z.any()).optional(),
+  docker: z.boolean().default(false),
+  aws: z.boolean().default(false),
+  gcp: z.boolean().default(false),
+  submodules: z.boolean().default(false),
+  lint: z.boolean().default(true),
+  "setup-script": z.string().optional(),
+  parallel: z.number().default(3),
+  timeout: z.number().default(60),
+  providerVersion: z.string().default(""),
+  skipCodegen: z.boolean().default(false),
+  skipWindowsArmBuild: z.boolean().default(false),
+});
+export type WorkflowOpts = z.infer<typeof WorkflowOpts>;
+
+export const getNativeProviderConfig = (provider: string) => {
+  const configPath = path.join(providersDir, provider, "config.yaml");
+  const content = fs.readFileSync(configPath, { encoding: "utf-8" });
+  const parsed = z
+    .intersection(NativeConfig, WorkflowOpts)
+    .parse(yaml.parse(content));
+  return {
+    ...parsed,
+  };
+};
+

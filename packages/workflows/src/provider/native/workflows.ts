@@ -1,30 +1,13 @@
-import { z } from "zod";
 import { GithubWorkflow, NormalJob } from "../github-workflow";
 import * as steps from "./steps";
 import { Step } from "./steps";
+import { WorkflowOpts } from "@pulumi/build-config";
 
 const pythonVersion = "3.7";
 const goVersion = "1.19.x";
 const nodeVersion = "14.x";
 const dotnetVersion = "3.1.301";
 const javaVersion = "11";
-
-export const WorkflowOpts = z.object({
-  provider: z.string(),
-  env: z.record(z.any()).optional(),
-  docker: z.boolean().default(false),
-  aws: z.boolean().default(false),
-  gcp: z.boolean().default(false),
-  submodules: z.boolean().default(false),
-  lint: z.boolean().default(true),
-  "setup-script": z.string().optional(),
-  parallel: z.number().default(3),
-  timeout: z.number().default(60),
-  providerVersion: z.string().default(""),
-  skipCodegen: z.boolean().default(false),
-  skipWindowsArmBuild: z.boolean().default(false),
-});
-type WorkflowOpts = z.infer<typeof WorkflowOpts>;
 
 const env = (opts: WorkflowOpts) =>
   Object.assign(
