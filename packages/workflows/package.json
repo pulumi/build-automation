@@ -11,12 +11,14 @@
     "url": "git+https://github.com/pulumi/build-automation.git"
   },
   "bin": {
-    "pulumi-generate-provider-workflows": "bin/cli.js"
+    "pulumi-generate-provider-workflows": "bin/providers.js",
+    "pulumi-generate-provider-examples": "bin/examples.js"
   },
   "scripts": {
     "clean": "rm -rf dist",
     "discovery": "wget https://json.schemastore.org/github-workflow.json -O github-workflow.json && json2ts -i github-workflow.json -o src/provider/github-workflow.d.ts --unreachableDefinitions --ignoreMinAndMaxItems",
-    "build": "tsc"
+    "build": "npm run tsbuild",
+    "tsbuild": "tsc"
   },
   "bugs": {
     "url": "https://github.com/pulumi/build-automation/issues"
