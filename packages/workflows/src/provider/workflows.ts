@@ -566,7 +566,7 @@ export function UpdateUpstreamProviderWorkflow(
             type: "create",
             issue_number: "${{ github.event.inputs.linked_issue_number }}",
             token: "${{ secrets.PULUMI_BOT_TOKEN }}",
-            body: "Failed to automatically update upstream provider (probably beacuse of new resources or data sources, which must be mapped manually).\n\nFor more details, see: ${{ steps.run-url.outputs.run-url }}",
+            body: "Failed to automatically update upstream provider (probably because of new resources or data sources, which must be mapped manually).\n\nFor more details, see: ${{ steps.run-url.outputs.run-url }}",
           },
         }),
     },

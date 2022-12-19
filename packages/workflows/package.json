@@ -2,10 +2,14 @@
   "name": "@pulumi/github-workflows",
   "version": "0.0.1",
   "description": "Automated Github Actions workflow generation for Pulumi & third-party providers",
-  "main": "dist/index.js",
   "author": "Pulumi",
   "license": "Apache-2.0",
   "homepage": "https://github.com/pulumi/build-automation#readme",
+  "main": "dist/index.js",
+  "files": [
+    "bin/**",
+    "dist/**"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pulumi/build-automation.git"
