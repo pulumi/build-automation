@@ -1,6 +1,6 @@
 {
   "name": "@pulumi/build-config",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Build configuration handling",
   "author": "Pulumi",
   "license": "Apache-2.0",
