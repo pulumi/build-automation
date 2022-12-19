@@ -1,0 +1,28 @@
+name: Continuous Integration
+
+# Controls when the action will run.
+on:
+  push:
+    # On which branch
+    branches:
+      - main*
+      - dependabot/**
+      - feature/**
+  # Will be called from the release workflow
+  workflow_call:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # Job name
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3.1.0
+      # Sets up node
+      - uses: actions/setup-node@v3.5.1
+        with:
+          node-version-file: package.json
+      - run: npm ci
+      - run: npm run build --workspaces

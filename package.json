@@ -32,5 +32,8 @@
   "workspaces": [
     "packages/config",
     "packages/workflows"
-  ]
+  ],
+  "volta": {
+    "node": "16.15.0"
+  }
 }
