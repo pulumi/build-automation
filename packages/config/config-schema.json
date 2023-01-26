@@ -8,8 +8,44 @@
           "properties": {
             "template": {
               "type": "string",
-              "const": "bridged",
-              "default": "bridged"
+              "const": "native"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "provider-default-branch": {
+              "type": "string",
+              "default": "master"
+            },
+            "golangci-timeout": {
+              "type": "string",
+              "default": "20m"
+            },
+            "major-version": {
+              "type": "number",
+              "default": 0
+            },
+            "customLdFlag": {
+              "type": "string",
+              "default": ""
+            },
+            "skipWindowsArmBuild": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "template",
+            "provider"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "template": {
+              "type": "string",
+              "const": "bridged"
             },
             "provider": {
               "type": "string"
@@ -122,6 +158,7 @@
             }
           },
           "required": [
+            "template",
             "provider",
             "upstream-provider-org"
           ],

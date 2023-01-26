@@ -11,7 +11,7 @@ const ExamplesConfig = z.object({
 
 const BridgedConfig = z
   .object({
-    template: z.literal("bridged").default("bridged"),
+    template: z.literal("bridged"),
     provider: z.string(),
     "generate-nightly-test-workflow": z.boolean().default(false),
     // Workflow options
@@ -52,6 +52,7 @@ const BridgedConfig = z
   });
 
 export const NativeConfig = z.object({
+  template: z.literal("native"),
   provider: z.string(),
   "provider-default-branch": z.string().default("master"),
   "golangci-timeout": z.string().default("20m"),
@@ -64,7 +65,7 @@ export const NativeConfig = z.object({
 export type BridgedConfig = z.TypeOf<typeof BridgedConfig>;
 export type NativeConfig = z.TypeOf<typeof NativeConfig>;
 
-export const Config = z.union([BridgedConfig, ExamplesConfig]);
+export const Config = z.union([NativeConfig, BridgedConfig, ExamplesConfig]);
 export type Config = z.TypeOf<typeof Config>;
 
 export const parseConfig = (content: string) => {
@@ -86,9 +87,8 @@ export const parseConfig = (content: string) => {
   return parsed;
 };
 
-export const getConfig = (provider: string): Config => {
-  const configPath = path.join(providersDir, provider, "config.yaml");
-  const content = fs.readFileSync(configPath, { encoding: "utf-8" });
+export const getConfig = (providerConfigFile: string): Config => {
+  const content = fs.readFileSync(providerConfigFile, { encoding: "utf-8" });
   return parseConfig(content);
 };
 
