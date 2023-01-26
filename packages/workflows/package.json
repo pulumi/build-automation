@@ -15,6 +15,7 @@
     "url": "git+https://github.com/pulumi/build-automation.git"
   },
   "bin": {
+    "pulumi-generate-provider-workflows": "bin/provider.js",
     "pulumi-generate-bridged-provider-workflows": "bin/providers-bridged.js",
     "pulumi-generate-native-provider-workflows": "bin/providers-native.js",
     "pulumi-generate-provider-examples": "bin/examples.js"

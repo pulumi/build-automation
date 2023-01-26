@@ -3,7 +3,7 @@ import * as path from "path";
 import * as yaml from "yaml";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { providersDir } from "@pulumi/build-config";
+import { providersDir, getConfig } from "@pulumi/build-config";
 import { buildProviderFiles, ProviderFile } from "../provider/bridged";
 
 const args = yargs(hideBin(process.argv))
@@ -84,6 +84,6 @@ debug("providers to generate", providerNames);
 
 const providerFiles = providerNames.map((providerName) => ({
   name: providerName,
-  files: buildProviderFiles(providerName),
+  files: buildProviderFiles(getConfig(path.join(providersDir, providerName))),
 }));
 providerFiles.forEach(writeProviderFiles);
