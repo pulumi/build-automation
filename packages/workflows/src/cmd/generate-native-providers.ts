@@ -3,7 +3,8 @@ import * as path from "path";
 import * as yaml from "yaml";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { buildProviderFiles, ProviderFile } from "../provider/native";
+import { ProviderFile } from "../provider";
+import { buildProviderFiles } from "../provider/native";
 
 export const providersDir = "providers";
 

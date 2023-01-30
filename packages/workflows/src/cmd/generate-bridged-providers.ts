@@ -4,7 +4,8 @@ import * as yaml from "yaml";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import { providersDir, getConfig } from "@pulumi/build-config";
-import { buildProviderFiles, ProviderFile } from "../provider/bridged";
+import { ProviderFile } from "../provider";
+import { buildProviderFiles } from "../provider";
 
 const args = yargs(hideBin(process.argv))
   .command("generate-providers", "generate the providers")

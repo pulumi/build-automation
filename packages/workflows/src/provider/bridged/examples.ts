@@ -1,5 +1,5 @@
 import { GithubWorkflow, NormalJob } from "../github-workflow";
-import { ProviderFile } from "./index";
+import { ProviderFile } from "..";
 import * as steps from "./steps";
 import { Step } from "./steps";
 import * as action from "../action-versions";

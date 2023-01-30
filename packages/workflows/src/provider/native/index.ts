@@ -1,16 +1,9 @@
-import * as fs from "fs";
 import * as path from "path";
-import * as yaml from "yaml";
-import z from "zod";
 import * as shared from "../shared-workflows";
 import * as wf from "./workflows";
 import * as goreleaser from "./goreleaser";
-import { getNativeProviderConfig, NativeConfig } from "@pulumi/build-config";
-
-export interface ProviderFile {
-  path: string;
-  data: unknown;
-}
+import { getNativeProviderConfig } from "@pulumi/build-config";
+import { ProviderFile } from "..";
 
 export const buildProviderFiles = (provider: string): ProviderFile[] => {
   const config = getNativeProviderConfig(provider);
