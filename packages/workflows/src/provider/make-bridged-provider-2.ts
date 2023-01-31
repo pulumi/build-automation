@@ -53,22 +53,24 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
       value: `$(shell [ -d "provider/overlays/dotnet" ] && find provider/overlays/dotnet -type f)`,
       type: "recursive",
     },
-    // Recursive variables are also lazy and cached - so only calculated once, if accessed
-    VERSION: {
-      value: "$(shell bin/pulumictl get version --language generic)",
+    // Input during CI using `make [TARGET] PROVIDER_VERSION=""` or by setting a PROVIDER_VERSION environment variable
+    // Local builds will just used this fixed default version unless specified
+    PROVIDER_VERSION: { type: "conditional", value: "0.0.1-alpha.0+dev" },
+    VERSION_GENERIC: {
       type: "recursive",
+      value: `$(shell bin/pulumictl convert-version -l generic -v "$(PROVIDER_VERSION)")`,
     },
     VERSION_DOTNET: {
-      value: "$(shell bin/pulumictl get version --language dotnet)",
       type: "recursive",
+      value: `$(shell bin/pulumictl convert-version -l dotnet -v "$(PROVIDER_VERSION)")`,
     },
     VERSION_JAVASCRIPT: {
-      value: "$(shell bin/pulumictl get version --language javascript)",
       type: "recursive",
+      value: `$(shell bin/pulumictl convert-version -l javascript -v "$(VERSION_GENERIC)")`,
     },
     VERSION_PYTHON: {
-      value: "$(shell bin/pulumictl get version --language python)",
       type: "recursive",
+      value: `$(shell bin/pulumictl convert-version -l python -v "$(VERSION_GENERIC)")`,
     },
     // Fake variable which lets us run a prerequisite commend before any targets
     _: {
@@ -121,7 +123,7 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     commands: [
       [
         "cd provider",
-        'go build -p 1 -o $(WORKING_DIR)/bin/$(TFGEN) -ldflags "-X $(PROJECT)/$(VERSION_PATH)=$(VERSION)" $(PROJECT)/$(PROVIDER_PATH)/cmd/$(TFGEN)',
+        'go build -p 1 -o $(WORKING_DIR)/bin/$(TFGEN) -ldflags "-X $(PROJECT)/$(VERSION_PATH)=$(VERSION_GENERIC)" $(PROJECT)/$(PROVIDER_PATH)/cmd/$(TFGEN)',
       ],
     ],
   };
@@ -134,7 +136,10 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     name: "provider/cmd/$(PROVIDER)/schema-embed.json",
     dependencies: [provider_schema],
     commands: [
-      ["cd provider", "VERSION=$(VERSION) go generate cmd/$(PROVIDER)/main.go"],
+      [
+        "cd provider",
+        "VERSION=$(VERSION_GENERIC) go generate cmd/$(PROVIDER)/main.go",
+      ],
     ],
   };
   const tfgen: Target = {
@@ -142,9 +147,9 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     phony: true,
     dependencies: [make_install_plugins, bin_tfgen, provider_schema],
   };
-  const ldFlagStatements = ["-X $(PROJECT)/$(VERSION_PATH)=$(VERSION)"];
+  const ldFlagStatements = ["-X $(PROJECT)/$(VERSION_PATH)=$(VERSION_GENERIC)"];
   if (config.providerVersion) {
-    ldFlagStatements.push(`-X ${config.providerVersion}=$(VERSION)`);
+    ldFlagStatements.push(`-X ${config.providerVersion}=$(VERSION_GENERIC)`);
   }
   const ldflags = ldFlagStatements.join(" ");
   const bin_provider: Target = {
