@@ -1,7 +1,12 @@
 import { BridgedConfig } from "@pulumi/build-config";
 import { Makefile, Target, Variables } from "./make";
 
-export function bridgedProviderV2(config: BridgedConfig): Makefile {
+export function bridgedProviderV2(
+  config: Pick<
+    BridgedConfig,
+    "provider" | "providerVersion" | "major-version" | "plugins"
+  >
+): Makefile {
   const PACK = config.provider;
   const ORG = "pulumi";
   const PROJECT = `github.com/$(ORG)/pulumi-$(PACK)`;

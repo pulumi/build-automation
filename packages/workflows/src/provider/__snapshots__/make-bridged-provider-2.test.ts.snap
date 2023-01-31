@@ -1,0 +1,188 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Makefile snapshot 1`] = `
+"PACK := pulumi-test-provider
+ORG := pulumi
+PROJECT := github.com/$(ORG)/pulumi-$(PACK)
+PROVIDER_PATH := provider
+VERSION_PATH := $(PROVIDER_PATH)/pkg/version.Version
+TFGEN := pulumi-tfgen-$(PACK)
+PROVIDER := pulumi-resource-$(PACK)
+TESTPARALLELISM := 10
+WORKING_DIR := $(shell pwd)
+PROVIDER_MODS := provider/go.mod provider/go.sum
+PROVIDER_PKG_SRC = $(shell find provider/pkg -type f -name "*.go")
+TFGEN_CMD_SRC = $(shell find provider/cmd/$(TFGEN) -type f -name "*.go")
+PROVIDER_CMD_SRC = $(shell find provider/cmd/$(PROVIDER) -type f -name "*.go")
+OVERLAYS_GO = $(shell [ -d "provider/overlays/go" ] && find provider/overlays/go -type f)
+OVERLAYS_NODEJS = $(shell [ -d "provider/overlays/nodejs" ] && find provider/overlays/nodejs -type f)
+OVERLAYS_PYTHON = $(shell [ -d "provider/overlays/python" ] && find provider/overlays/python -type f)
+OVERLAYS_DOTNET = $(shell [ -d "provider/overlays/dotnet" ] && find provider/overlays/dotnet -type f)
+PROVIDER_VERSION ?= 0.0.1-alpha.0+dev
+VERSION_GENERIC = $(shell bin/pulumictl convert-version -l generic -v "$(PROVIDER_VERSION)")
+VERSION_DOTNET = $(shell bin/pulumictl convert-version -l dotnet -v "$(PROVIDER_VERSION)")
+VERSION_JAVASCRIPT = $(shell bin/pulumictl convert-version -l javascript -v "$(VERSION_GENERIC)")
+VERSION_PYTHON = $(shell bin/pulumictl convert-version -l python -v "$(VERSION_GENERIC)")
+_ := $(shell mkdir -p .make)
+
+development: install_plugins provider build_sdks install_sdks
+
+build: install_plugins provider build_sdks install_sdks
+
+build_dotnet: .make/build_dotnet
+
+build_go: .make/build_go
+
+build_java: .make/build_java
+
+build_nodejs: .make/build_nodejs
+
+build_python: .make/build_python
+
+build_sdks: build_nodejs build_python build_go build_dotnet build_java
+
+install_dotnet_sdk: .make/install_dotnet_sdk
+
+install_go_sdk: 
+
+install_java_sdk: 
+
+install_nodejs_sdk: .make/install_nodejs_sdk
+
+install_plugins: .make/install_plugins
+
+install_python_sdk: 
+
+install_sdks: install_dotnet_sdk install_python_sdk install_nodejs_sdk install_java_sdk install_go_sdk
+
+provider: bin/$(PROVIDER)
+
+tfgen: .make/install_plugins bin/$(TFGEN) provider/cmd/$(PROVIDER)/schema.json
+
+clean: 
+	rm -rf sdk/{dotnet,nodejs,go,python}
+
+cleanup: 
+	rm -r bin
+	rm -rf .make
+	rm -f provider/cmd/$(PROVIDER)/schema.go
+
+help: 
+	@grep '^[^.#]\\+:\\s\\+.*#' Makefile | \\
+	sed "s/\\(.\\+\\):\\s*\\(.*\\) #\\s*\\(.*\\)/\`printf "\\033[93m"\`\\1\`printf "\\033[0m"\`	\\3 [\\2]/" | \\
+	expand -t20
+
+lint_provider: bin/$(PROVIDER)
+	cd provider && golangci-lint run -c ../.golangci.yml
+
+test: 
+	cd examples && go test -v -tags=all -parallel $(TESTPARALLELISM) -timeout 2h
+
+only_build: build
+
+.make/build_dotnet: .make/gen_dotnet
+	cd sdk/dotnet/ && \\
+		dotnet build /p:Version=$(VERSION_DOTNET)
+	@touch $@
+
+.make/build_go: .make/gen_go
+	cd sdk && \\
+		go list \`grep -e "^module" go.mod | cut -d ' ' -f 2\`/go/... | xargs go build
+	@touch $@
+
+.make/build_java: .make/gen_java
+	cd sdk/java && \\
+		gradle --console=plain build
+	@touch $@
+
+.make/build_nodejs: .make/gen_nodejs
+	cd sdk/nodejs/ && \\
+		echo "module fake_nodejs_module // Exclude this directory from Go tools\\n\\ngo 1.17" > go.mod && \\
+		yarn install && \\
+		yarn run tsc && \\
+		cp ../../README.md ../../LICENSE* package.json yarn.lock ./bin/ && \\
+		sed -i.bak -e "s/\\$\${VERSION}/$(VERSION_JAVASCRIPT)/g" ./bin/package.json
+	@touch $@
+
+.make/build_python: gen_python
+	cd sdk/python/ && \\
+		python3 setup.py clean --all 2>/dev/null && \\
+		rm -rf ./bin/ ../python.bin/ && cp -R . ../python.bin && mv ../python.bin ./bin && \\
+		sed -i.bak -e 's/^VERSION = .*/VERSION = "$(VERSION_PYTHON)"/g' -e 's/^PLUGIN_VERSION = .*/PLUGIN_VERSION = "$(VERSION_PYTHON)"/g' ./bin/setup.py && \\
+		rm ./bin/setup.py.bak && rm ./bin/go.mod && \\
+		cd ./bin && python3 setup.py build sdist
+	@touch $@
+
+.make/gen_dotnet: bin/$(TFGEN) $(OVERLAYS_DOTNET)
+	rm -rf sdk/dotnet
+	bin/$(TFGEN) dotnet --out sdk/dotnet/
+	echo "module fake_dotnet_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/dotnet/go.mod
+	echo "$(VERSION_DOTNET)" > sdk/dotnet/version.txt
+	@touch $@
+
+.make/gen_go: bin/$(TFGEN) $(OVERLAYS_GO)
+	rm -rf sdk/go
+	bin/$(TFGEN) go --out sdk/go/
+	@touch $@
+
+.make/gen_java: bin/pulumi-java-gen
+	rm -rf sdk/java
+	bin/pulumi-java-gen generate --schema provider/cmd/$(PROVIDER)/schema.json --out sdk/java  --build gradle-nexus
+	echo "module fake_java_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/java/go.mod
+	@touch $@
+
+.make/gen_nodejs: bin/$(TFGEN) $(OVERLAYS_NODEJS)
+	rm -rf sdk/nodejs
+	mkdir -p sdk/nodejs
+	bin/$(TFGEN) nodejs --out sdk/nodejs/
+	@touch $@
+
+.make/install_dotnet_sdk: 
+	mkdir -p nuget
+	find sdk/dotnet -name '*.nupkg' -print -exec cp -p {} nuget \\;
+	@touch $@
+
+.make/install_nodejs_sdk: 
+	yarn link --cwd sdk/nodejs/bin
+	@touch $@
+
+.make/install_plugins: bin/pulumictl
+	[ -x $(shell which pulumi) ] || curl -fsSL https://get.pulumi.com | sh
+	@touch $@
+
+bin/$(PROVIDER): .make/install_plugins provider/cmd/$(PROVIDER)/schema-embed.json $(PROVIDER_MODS) $(PROVIDER_PKG_SRC) $(PROVIDER_CMD_SRC)
+	(cd provider && go build -p 1 -o $(WORKING_DIR)/bin/$(PROVIDER) -ldflags "-X $(PROJECT)/$(VERSION_PATH)=$(VERSION_GENERIC) -X github.com/pulumi/terraform-provider-test-provider/version.ProviderVersion=$(VERSION_GENERIC)" $(PROJECT)/$(PROVIDER_PATH)/cmd/$(PROVIDER))
+
+bin/$(TFGEN): .make/install_plugins $(PROVIDER_MODS) $(PROVIDER_PKG_SRC) $(TFGEN_CMD_SRC)
+	cd provider && \\
+		go build -p 1 -o $(WORKING_DIR)/bin/$(TFGEN) -ldflags "-X $(PROJECT)/$(VERSION_PATH)=$(VERSION_GENERIC)" $(PROJECT)/$(PROVIDER_PATH)/cmd/$(TFGEN)
+
+bin/pulumi-java-gen: bin/pulumictl .version.javagen.txt
+	$(shell bin/pulumictl download-binary -n pulumi-language-java -v $(shell cat .version.javagen.txt) -r pulumi/pulumi-java)
+
+bin/pulumictl: PULUMICTL_VERSION := $(shell cat .version.pulumictl.txt)
+bin/pulumictl: PLAT := $(shell go version | sed -En "s/go version go.* (.*)\\/(.*)/\\1-\\2/p")
+bin/pulumictl: PULUMICTL_URL := https://github.com/pulumi/pulumictl/releases/download/$(PULUMICTL_VERSION)/pulumictl-$(PULUMICTL_VERSION)-$(PLAT).tar.gz
+bin/pulumictl: .version.pulumictl.txt
+	@echo "Installing pulumictl"
+	@mkdir -p bin
+	wget -q -O - "$(PULUMICTL_URL)" | tar -xzf - -C $(WORKING_DIR)/bin pulumictl
+	@touch bin/pulumictl
+	@echo "pulumictl" $$(./bin/pulumictl version)
+
+gen_python: bin/$(TFGEN) $(OVERLAYS_PYTHON)
+	rm -rf sdk/python
+	cp README.md sdk/python
+	echo "module fake_python_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/python/go.mod
+	bin/$(TFGEN) python --out sdk/python/
+	@touch $@
+
+provider/cmd/$(PROVIDER)/schema-embed.json: provider/cmd/$(PROVIDER)/schema.json
+	cd provider && \\
+		VERSION=$(VERSION_GENERIC) go generate cmd/$(PROVIDER)/main.go
+
+provider/cmd/$(PROVIDER)/schema.json: bin/$(TFGEN) .make/install_plugins
+	bin/$(TFGEN) schema --out provider/cmd/$(PROVIDER)
+
+.PHONY: development build build_dotnet build_go build_java build_nodejs build_python build_sdks install_dotnet_sdk install_go_sdk install_java_sdk install_nodejs_sdk install_plugins install_python_sdk install_sdks provider tfgen clean cleanup help lint_provider test"
+`;
