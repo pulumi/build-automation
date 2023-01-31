@@ -174,7 +174,11 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     name: ".make/gen_nodejs",
     autoTouch: true,
     dependencies: [bin_tfgen, "$(OVERLAYS_NODEJS)"],
-    commands: ["bin/$(TFGEN) nodejs --out sdk/nodejs/"],
+    commands: [
+      "rm -rf sdk/nodejs",
+      "mkdir -p sdk/nodejs",
+      "bin/$(TFGEN) nodejs --out sdk/nodejs/",
+    ],
   };
   const make_build_nodejs: Target = {
     name: ".make/build_nodejs",
@@ -200,7 +204,12 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     name: "gen_python",
     autoTouch: true,
     dependencies: [bin_tfgen, "$(OVERLAYS_PYTHON)"],
-    commands: ["bin/$(TFGEN) python --out sdk/python/"],
+    commands: [
+      "rm -rf sdk/python",
+      "cp README.md sdk/python",
+      'echo "module fake_python_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/python/go.mod',
+      "bin/$(TFGEN) python --out sdk/python/",
+    ],
   };
   const make_build_python: Target = {
     name: ".make/build_python",
@@ -208,14 +217,12 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     dependencies: [make_gen_python],
     commands: [
       [
-        "cd sdk/python/",
-        'echo "module fake_python_module // Exclude this directory from Go tools\\n\\ngo 1.17" > go.mod',
-        "cp ../../README.md .",
-        "python3 setup.py clean --all 2>/dev/null",
-        "rm -rf ./bin/ ../python.bin/ && cp -R . ../python.bin && mv ../python.bin ./bin",
+        `cd sdk/python/`,
+        `python3 setup.py clean --all 2>/dev/null`,
+        `rm -rf ./bin/ ../python.bin/ && cp -R . ../python.bin && mv ../python.bin ./bin`,
         `sed -i.bak -e 's/^VERSION = .*/VERSION = "$(VERSION_PYTHON)"/g' -e 's/^PLUGIN_VERSION = .*/PLUGIN_VERSION = "$(VERSION_PYTHON)"/g' ./bin/setup.py`,
-        "rm ./bin/setup.py.bak && rm ./bin/go.mod",
-        "cd ./bin && python3 setup.py build sdist",
+        `rm ./bin/setup.py.bak && rm ./bin/go.mod`,
+        `cd ./bin && python3 setup.py build sdist`,
       ],
     ],
   };
@@ -228,18 +235,21 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     name: ".make/gen_go",
     autoTouch: true,
     dependencies: [bin_tfgen, "$(OVERLAYS_GO)"],
-    commands: ["bin/$(TFGEN) go --out sdk/go/"],
+    commands: ["rm -rf sdk/go", "bin/$(TFGEN) go --out sdk/go/"],
   };
   const make_build_go: Target = {
     name: ".make/build_go",
     autoTouch: true,
     dependencies: [make_gen_go],
     commands: [
-      // The following pulls out the `module` line from go.mod to determine the right
-      // module prefix path for the SDK (including versions etc.), then runs a `go list`
-      // to determine all packages under the SDK. Finally, this issues a go build on all
-      // the packages discovered.
-      `cd sdk && go list \`grep -e "^module" go.mod | cut -d ' ' -f 2\`/go/... | xargs go build`,
+      [
+        `cd sdk`,
+        // The following pulls out the `module` line from go.mod to determine the right
+        // module prefix path for the SDK (including versions etc.), then runs a `go list`
+        // to determine all packages under the SDK. Finally, this issues a go build on all
+        // the packages discovered.
+        `go list \`grep -e "^module" go.mod | cut -d ' ' -f 2\`/go/... | xargs go build`,
+      ],
     ],
   };
   const build_go: Target = {
@@ -252,6 +262,7 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     autoTouch: true,
     dependencies: [bin_tfgen, "$(OVERLAYS_DOTNET)"],
     commands: [
+      "rm -rf sdk/dotnet",
       "bin/$(TFGEN) dotnet --out sdk/dotnet/",
       'echo "module fake_dotnet_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/dotnet/go.mod',
       'echo "$(VERSION_DOTNET)" > sdk/dotnet/version.txt',
@@ -280,11 +291,9 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     autoTouch: true,
     dependencies: [bin_pulumi_java_gen],
     commands: [
+      "rm -rf sdk/java",
       "bin/pulumi-java-gen generate --schema provider/cmd/$(PROVIDER)/schema.json --out sdk/java  --build gradle-nexus",
-      [
-        "cd sdk/java",
-        'echo "module fake_java_module // Exclude this directory from Go tools\\n\\ngo 1.17" > go.mod',
-      ],
+      'echo "module fake_java_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/java/go.mod',
     ],
   };
   const make_build_java: Target = {
@@ -318,7 +327,11 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
   const cleanup: Target = {
     name: "cleanup",
     phony: true,
-    commands: ["rm -r bin", "rm -f provider/cmd/$(PROVIDER)/schema.go"],
+    commands: [
+      "rm -r bin",
+      "rm -rf .make",
+      "rm -f provider/cmd/$(PROVIDER)/schema.go",
+    ],
   };
   const help: Target = {
     name: "help",
