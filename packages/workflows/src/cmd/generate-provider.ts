@@ -5,6 +5,7 @@ import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import { getConfig } from "@pulumi/build-config";
 import { buildProviderFiles, ProviderFile } from "../provider";
+import { generateThirdpartyProviderFiles } from "../provider/bridged";
 
 const args = yargs(hideBin(process.argv))
   .command("generate-provider", "generate the Github Actions workflows for a provider")
@@ -28,7 +29,6 @@ const writeProviderFiles = (providerFiles: ProviderFile[]) => {
       typeof file.data === "string"
         ? file.data
         : yaml.stringify(file.data, {
-            sortMapEntries: true,
             indentSeq: false,
             lineWidth: 140,
           });
@@ -50,5 +50,5 @@ const writeProviderFiles = (providerFiles: ProviderFile[]) => {
 const providerInfo = getConfig('config.yaml');
 debug("provider files to generate", providerInfo);
 
-const providerFiles = buildProviderFiles(providerInfo);
+const providerFiles = buildProviderFiles(providerInfo, generateThirdpartyProviderFiles);
 writeProviderFiles(providerFiles);

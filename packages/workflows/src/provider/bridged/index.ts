@@ -103,3 +103,14 @@ export function generateProviderFiles(config: BridgedConfig) {
 
   return files;
 }
+
+export function generateThirdpartyProviderFiles(config: BridgedConfig) {
+  const githubWorkflowsDir = path.join(path.join(".github", "workflows"));
+  const files: ProviderFile[] = [
+    {
+      path: path.join(githubWorkflowsDir, "main.yml"),
+      data: wf.ThirdPartyDefaultBranchWorkflow("main", config),
+    },
+  ];
+  return files;
+}

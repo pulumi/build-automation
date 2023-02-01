@@ -6,6 +6,7 @@ import { hideBin } from "yargs/helpers";
 import { providersDir, getConfig } from "@pulumi/build-config";
 import { ProviderFile } from "../provider";
 import { buildProviderFiles } from "../provider";
+import { generateProviderFiles } from "../provider/bridged";
 
 const args = yargs(hideBin(process.argv))
   .command("generate-providers", "generate the providers")
@@ -85,6 +86,6 @@ debug("providers to generate", providerNames);
 
 const providerFiles = providerNames.map((providerName) => ({
   name: providerName,
-  files: buildProviderFiles(getConfig(path.join(providersDir, providerName))),
+  files: buildProviderFiles(getConfig(path.join(providersDir, providerName)), generateProviderFiles),
 }));
 providerFiles.forEach(writeProviderFiles);

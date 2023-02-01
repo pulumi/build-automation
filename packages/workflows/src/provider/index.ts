@@ -1,4 +1,4 @@
-import { Config } from "@pulumi/build-config";
+import { Config, BridgedConfig } from "@pulumi/build-config";
 
 import * as native from './native'
 import * as bridged from './bridged'
@@ -8,13 +8,15 @@ export interface ProviderFile {
     data: unknown;
 }
 
-export const buildProviderFiles = (config: Config): ProviderFile[] => {
+type GeneratorFunction = (config: BridgedConfig) => ProviderFile[];
+
+export const buildProviderFiles = (config: Config, generator: GeneratorFunction): ProviderFile[] => {
     if (config.template !== "bridged") {
         throw new Error(
             `Expected bridged template config, found "${config.template}"`
         );
     }
-    return bridged.generateProviderFiles(config);
+    return generator(config);
 };
 
 export default { native, bridged };

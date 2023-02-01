@@ -6,16 +6,20 @@ export type Step = Required<NormalJob>["steps"][0];
 export interface checkoutArgs {
   repo?: string;
   path?: string;
+  fetchDepth?: number;
 }
 
 export function CheckoutRepoStep(args?: checkoutArgs): Step {
   if (args) {
-    const checkOutWith: { [k: string]: string } = {};
+    const checkOutWith: { [k: string]: string | number } = {};
     if (args.repo) {
       checkOutWith["repository"] = args.repo;
     }
     if (args.path) {
       checkOutWith["path"] = args.path;
+    }
+    if (args.fetchDepth !== undefined) {
+      checkOutWith["fetch-depth"] = args.fetchDepth;
     }
     return {
       name: "Checkout repo",

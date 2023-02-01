@@ -1143,3 +1143,151 @@ export function ModerationWorkflow(
   };
   return workflow;
 }
+
+// --- Third party provider workflows & jobs
+
+const thirdPartyEnv = (opts: BridgedConfig) =>
+  Object.assign(
+    {
+      GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}",
+      NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}",
+      NPM_TOKEN: "${{ secrets.NPM_TOKEN }}",
+      NUGET_PUBLISH_KEY: "${{ secrets.NUGET_PUBLISH_KEY }}",
+      PROVIDER: opts.provider,
+      PULUMI_GO_DEP_ROOT: "${{ github.workspace }}/..",
+      PULUMI_LOCAL_NUGET: "${{ github.workspace }}/nuget",
+      PYPI_PASSWORD: "${{ secrets.PYPI_PASSWORD }}",
+      TRAVIS_OS_NAME: "linux",
+    },
+    opts.env
+  );
+
+
+export class ThirdpartyPrerequisitesJob implements NormalJob {
+  name: string;
+  "runs-on" = "ubuntu-latest";
+  if: NormalJob["if"];
+  strategy = {
+    "fail-fast": true,
+    matrix: {
+      dotnetversion: [dotnetVersion],
+      goversion: [goVersion],
+      pythonversion: [pythonVersion],
+      nodeversion: [nodeVersion],
+    },
+  };
+  steps = [
+    steps.CheckoutRepoStep({
+      fetchDepth: 0,
+    }),
+    steps.CheckoutScriptsRepoStep(),
+    steps.InstallGo(),
+    steps.InstallPulumiCtl(),
+    steps.InstallPulumiCli(),
+    steps.BuildBinariesStep(),
+    steps.ZipProviderBinariesStep(),
+    steps.UploadProviderBinariesStep(),
+  ].filter((step: Step) => step.uses !== undefined || step.run !== undefined);
+
+  constructor(name: string) {
+    this.name = name;
+    Object.assign(this, { name });
+  }
+
+  addDispatchConditional(isWorkflowDispatch: boolean) {
+    if (isWorkflowDispatch) {
+      this.if =
+        "github.event_name == 'repository_dispatch' || github.event.pull_request.head.repo.full_name == github.repository";
+
+      this.steps = this.steps.filter((step) => step.name !== "Checkout Repo");
+      this.steps.unshift(steps.CheckoutRepoStepAtPR());
+    }
+    return this;
+  }
+}
+
+export class ThirdpartyBuildSdkJob implements NormalJob {
+  needs = "prerequisites";
+  "runs-on" = "ubuntu-latest";
+  strategy = {
+    "fail-fast": true,
+    matrix: {
+      goversion: [goVersion],
+      dotnetversion: [dotnetVersion],
+      pythonversion: [pythonVersion],
+      nodeversion: [nodeVersion],
+    },
+  };
+  steps = [
+    steps.CheckoutRepoStep({
+      fetchDepth: 0,
+    }),
+    steps.CheckoutScriptsRepoStep(),
+    steps.InstallGo(),
+    steps.InstallPulumiCtl(),
+    steps.InstallPulumiCli(),
+    steps.InstallNodeJS(),
+    steps.InstallDotNet(),
+    steps.InstallPython(),
+    steps.DownloadProviderStep(),
+    steps.UnzipProviderBinariesStep(),
+    steps.InstallPlugins(),
+    steps.SetProvidersToPATH(),
+    steps.SetPackageVersionToEnv(),
+    steps.BuildSdksStep(),
+    steps.CheckCleanWorkTreeStep(),
+    steps.ZipSDKsStep(),
+    steps.UploadSdkStep(),
+  ];
+  name: string;
+  if: NormalJob["if"];
+
+  constructor(name: string) {
+    this.name = name;
+    Object.assign(this, { name });
+  }
+
+  addDispatchConditional(isWorkflowDispatch: boolean) {
+    if (isWorkflowDispatch) {
+      this.if =
+        "github.event_name == 'repository_dispatch' || github.event.pull_request.head.repo.full_name == github.repository";
+
+      this.steps = this.steps.filter((step) => step.name !== "Checkout Repo");
+      this.steps.unshift(steps.CheckoutRepoStepAtPR());
+    }
+    return this;
+  }
+}
+
+export function ThirdPartyDefaultBranchWorkflow(
+  name: string,
+  opts: BridgedConfig
+): GithubWorkflow {
+  const workflow: GithubWorkflow = {
+    name,
+    on: {
+      push: {
+        branches: [name],
+        "tags-ignore": ["v*", "sdk/*", "**"],
+        "paths-ignore": ["**.md"],
+      },
+      pull_request: {
+        branches: [name],
+        "paths-ignore": ["**.md"],
+      },
+    },
+    env: thirdPartyEnv(opts),
+    jobs: {
+      prerequisites: new ThirdpartyPrerequisitesJob("prerequisites"),
+      build_sdk: new ThirdpartyBuildSdkJob("build_sdk"),
+    },
+  };
+
+  if (opts.lint) {
+    workflow.jobs = Object.assign(workflow.jobs, {
+      lint: new LintProviderJob("lint"),
+      lint_sdk: new LintSDKJob("lint-sdk", opts),
+    });
+  }
+  return workflow;
+}
