@@ -1291,3 +1291,87 @@ export function ThirdPartyDefaultBranchWorkflow(
   }
   return workflow;
 }
+
+export class ThirdpartyPublishJob implements NormalJob {
+  "runs-on" = "ubuntu-latest";
+  needs = "test";
+  name: string;
+  steps: NormalJob["steps"];
+
+  constructor(name: string, opts: BridgedConfig) {
+    this.name = name;
+    Object.assign(this, { name });
+    this.steps = [
+      steps.CheckoutRepoStep({
+        fetchDepth: 0,
+      }),
+      steps.InstallGo(),
+      steps.InstallPulumiCtl(),
+      steps.InstallPulumiCli(),
+      steps.ConfigureAwsCredentialsForPublish(),
+      steps.SetPreReleaseVersion(),
+      steps.RunGoReleaserWithArgs(
+        `-p ${opts.parallel} release --rm-dist --timeout ${opts.timeout}m0s`
+      ),
+    ];
+  }
+}
+export class ThirdpartyPublishSDKJob implements NormalJob {
+  "runs-on" = "ubuntu-latest";
+  needs = "publish";
+  steps = [
+    steps.CheckoutRepoStep({
+      fetchDepth: 0,
+    }),
+    steps.CheckoutScriptsRepoStep(),
+    steps.InstallGo(),
+    steps.InstallPulumiCtl(),
+    steps.InstallPulumiCli(),
+    steps.InstallNodeJS(),
+    steps.InstallDotNet(),
+    steps.InstallPython(),
+    steps.DownloadSpecificSDKStep("python"),
+    steps.UnzipSpecificSDKStep("python"),
+    steps.DownloadSpecificSDKStep("dotnet"),
+    steps.UnzipSpecificSDKStep("dotnet"),
+    steps.DownloadSpecificSDKStep("nodejs"),
+    steps.UnzipSpecificSDKStep("nodejs"),
+    steps.RunCommand("python -m pip install pip twine"),
+    steps.RunPublishSDK(),
+  ];
+  name: string;
+
+  constructor(name: string) {
+    this.name = name;
+    Object.assign(this, { name });
+  }
+}
+
+export function ThirdpartyReleaseWorkflow(
+  name: string,
+  opts: BridgedConfig
+): GithubWorkflow {
+  const workflow: GithubWorkflow = {
+    name: name,
+    on: {
+      push: {
+        tags: ["v*.*.*", "!v*.*.*-**"],
+      },
+    },
+    env: thirdPartyEnv(opts),
+    jobs: {
+      prerequisites: new ThirdpartyPrerequisitesJob("prerequisites"),
+      build_sdk: new ThirdpartyBuildSdkJob("build_sdk"),
+      publish: new ThirdpartyPublishJob("publish", opts),
+      publish_sdk: new ThirdpartyPublishSDKJob("publish_sdk"),
+    },
+  };
+
+  if (opts.lint) {
+    workflow.jobs = Object.assign(workflow.jobs, {
+      lint: new LintProviderJob("lint"),
+      lint_sdk: new LintSDKJob("lint-sdk", opts),
+    });
+  }
+  return workflow;
+}
