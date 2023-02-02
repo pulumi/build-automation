@@ -111,6 +111,10 @@ export function generateThirdpartyProviderFiles(config: BridgedConfig) {
       path: path.join(githubWorkflowsDir, "main.yml"),
       data: wf.ThirdPartyDefaultBranchWorkflow("main", config),
     },
+    {
+      path: path.join(githubWorkflowsDir, "release.yml"),
+      data: wf.ThirdpartyReleaseWorkflow("release", config),
+    },
   ];
   return files;
 }
