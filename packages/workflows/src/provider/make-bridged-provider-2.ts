@@ -1,7 +1,12 @@
 import { BridgedConfig } from "@pulumi/build-config";
 import { Makefile, Target, Variables } from "./make";
 
-export function bridgedProviderV2(config: BridgedConfig): Makefile {
+export function bridgedProviderV2(
+  config: Pick<
+    BridgedConfig,
+    "provider" | "providerVersion" | "major-version" | "plugins"
+  >
+): Makefile {
   const PACK = config.provider;
   const ORG = "pulumi";
   const PROJECT = `github.com/$(ORG)/pulumi-$(PACK)`;
@@ -53,22 +58,29 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
       value: `$(shell [ -d "provider/overlays/dotnet" ] && find provider/overlays/dotnet -type f)`,
       type: "recursive",
     },
-    // Recursive variables are also lazy and cached - so only calculated once, if accessed
-    VERSION: {
-      value: "$(shell bin/pulumictl get version --language generic)",
+    // Input during CI using `make [TARGET] PROVIDER_VERSION=""` or by setting a PROVIDER_VERSION environment variable
+    // Local builds will just used this fixed default version unless specified
+    PROVIDER_VERSION: { type: "conditional", value: "0.0.1-alpha.0+dev" },
+    VERSION_GENERIC: {
       type: "recursive",
+      value: `$(shell bin/pulumictl convert-version -l generic -v "$(PROVIDER_VERSION)")`,
     },
     VERSION_DOTNET: {
-      value: "$(shell bin/pulumictl get version --language dotnet)",
       type: "recursive",
+      value: `$(shell bin/pulumictl convert-version -l dotnet -v "$(PROVIDER_VERSION)")`,
     },
     VERSION_JAVASCRIPT: {
-      value: "$(shell bin/pulumictl get version --language javascript)",
       type: "recursive",
+      value: `$(shell bin/pulumictl convert-version -l javascript -v "$(VERSION_GENERIC)")`,
     },
     VERSION_PYTHON: {
-      value: "$(shell bin/pulumictl get version --language python)",
       type: "recursive",
+      value: `$(shell bin/pulumictl convert-version -l python -v "$(VERSION_GENERIC)")`,
+    },
+    // Fake variable which lets us run a prerequisite commend before any targets
+    _: {
+      value: "$(shell mkdir -p .make)",
+      type: "simple",
     },
   } as const;
 
@@ -89,8 +101,8 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
       '@echo "pulumictl" $$(./bin/pulumictl version)',
     ],
   };
-  const install_plugins_sentinel: Target = {
-    name: "install_plugins.sentinel",
+  const make_install_plugins: Target = {
+    name: ".make/install_plugins",
     autoTouch: true,
     dependencies: [bin_pulumictl],
     commands: [
@@ -103,12 +115,12 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
   const install_plugins: Target = {
     name: "install_plugins",
     phony: true,
-    dependencies: [install_plugins_sentinel],
+    dependencies: [make_install_plugins],
   };
   const bin_tfgen: Target = {
     name: "bin/$(TFGEN)",
     dependencies: [
-      install_plugins_sentinel,
+      make_install_plugins,
       "$(PROVIDER_MODS)",
       "$(PROVIDER_PKG_SRC)",
       "$(TFGEN_CMD_SRC)",
@@ -116,36 +128,39 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     commands: [
       [
         "cd provider",
-        'go build -p 1 -o $(WORKING_DIR)/bin/$(TFGEN) -ldflags "-X $(PROJECT)/$(VERSION_PATH)=$(VERSION)" $(PROJECT)/$(PROVIDER_PATH)/cmd/$(TFGEN)',
+        'go build -p 1 -o $(WORKING_DIR)/bin/$(TFGEN) -ldflags "-X $(PROJECT)/$(VERSION_PATH)=$(VERSION_GENERIC)" $(PROJECT)/$(PROVIDER_PATH)/cmd/$(TFGEN)',
       ],
     ],
   };
   const provider_schema: Target = {
     name: "provider/cmd/$(PROVIDER)/schema.json",
-    dependencies: [bin_tfgen, install_plugins_sentinel],
+    dependencies: [bin_tfgen, make_install_plugins],
     commands: ["bin/$(TFGEN) schema --out provider/cmd/$(PROVIDER)"],
   };
   const provider_schema_embed: Target = {
     name: "provider/cmd/$(PROVIDER)/schema-embed.json",
     dependencies: [provider_schema],
     commands: [
-      ["cd provider", "VERSION=$(VERSION) go generate cmd/$(PROVIDER)/main.go"],
+      [
+        "cd provider",
+        "VERSION=$(VERSION_GENERIC) go generate cmd/$(PROVIDER)/main.go",
+      ],
     ],
   };
   const tfgen: Target = {
     name: "tfgen",
     phony: true,
-    dependencies: [install_plugins_sentinel, bin_tfgen, provider_schema],
+    dependencies: [make_install_plugins, bin_tfgen, provider_schema],
   };
-  const ldFlagStatements = ["-X $(PROJECT)/$(VERSION_PATH)=$(VERSION)"];
+  const ldFlagStatements = ["-X $(PROJECT)/$(VERSION_PATH)=$(VERSION_GENERIC)"];
   if (config.providerVersion) {
-    ldFlagStatements.push(`-X ${config.providerVersion}=$(VERSION)`);
+    ldFlagStatements.push(`-X ${config.providerVersion}=$(VERSION_GENERIC)`);
   }
   const ldflags = ldFlagStatements.join(" ");
   const bin_provider: Target = {
     name: "bin/$(PROVIDER)",
     dependencies: [
-      install_plugins_sentinel,
+      make_install_plugins,
       provider_schema_embed,
       "$(PROVIDER_MODS)",
       "$(PROVIDER_PKG_SRC)",
@@ -160,16 +175,20 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     phony: true,
     dependencies: [bin_provider],
   };
-  const sdk_nodejs_gen: Target = {
-    name: "sdk/nodejs/.gen.sentinel",
+  const make_gen_nodejs: Target = {
+    name: ".make/gen_nodejs",
     autoTouch: true,
     dependencies: [bin_tfgen, "$(OVERLAYS_NODEJS)"],
-    commands: ["bin/$(TFGEN) nodejs --out sdk/nodejs/"],
+    commands: [
+      "rm -rf sdk/nodejs",
+      "mkdir -p sdk/nodejs",
+      "bin/$(TFGEN) nodejs --out sdk/nodejs/",
+    ],
   };
-  const sdk_nodejs_build: Target = {
-    name: "sdk/nodejs/.build.sentinel",
+  const make_build_nodejs: Target = {
+    name: ".make/build_nodejs",
     autoTouch: true,
-    dependencies: [sdk_nodejs_gen],
+    dependencies: [make_gen_nodejs],
     commands: [
       [
         "cd sdk/nodejs/",
@@ -184,74 +203,86 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
   const build_nodejs: Target = {
     name: "build_nodejs",
     phony: true,
-    dependencies: [sdk_nodejs_build],
+    dependencies: [make_build_nodejs],
   };
-  const sdk_python_gen: Target = {
-    name: "sdk/python/.gen.sentinel",
+  const make_gen_python: Target = {
+    name: "gen_python",
     autoTouch: true,
     dependencies: [bin_tfgen, "$(OVERLAYS_PYTHON)"],
-    commands: ["bin/$(TFGEN) python --out sdk/python/"],
+    commands: [
+      "rm -rf sdk/python",
+      "cp README.md sdk/python",
+      'echo "module fake_python_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/python/go.mod',
+      "bin/$(TFGEN) python --out sdk/python/",
+    ],
   };
-  const sdk_python_build: Target = {
-    name: "sdk/python/.build.sentinel",
+  const make_build_python: Target = {
+    name: ".make/build_python",
     autoTouch: true,
-    dependencies: [sdk_python_gen],
+    dependencies: [make_gen_python],
     commands: [
       [
-        "cd sdk/python/",
-        'echo "module fake_python_module // Exclude this directory from Go tools\\n\\ngo 1.17" > go.mod',
-        "cp ../../README.md .",
-        "python3 setup.py clean --all 2>/dev/null",
-        "rm -rf ./bin/ ../python.bin/ && cp -R . ../python.bin && mv ../python.bin ./bin",
+        `cd sdk/python/`,
+        `python3 setup.py clean --all 2>/dev/null`,
+        `rm -rf ./bin/ ../python.bin/ && cp -R . ../python.bin && mv ../python.bin ./bin`,
         `sed -i.bak -e 's/^VERSION = .*/VERSION = "$(VERSION_PYTHON)"/g' -e 's/^PLUGIN_VERSION = .*/PLUGIN_VERSION = "$(VERSION_PYTHON)"/g' ./bin/setup.py`,
-        "rm ./bin/setup.py.bak && rm ./bin/go.mod",
-        "cd ./bin && python3 setup.py build sdist",
+        `rm ./bin/setup.py.bak && rm ./bin/go.mod`,
+        `cd ./bin && python3 setup.py build sdist`,
       ],
     ],
   };
   const build_python: Target = {
     name: "build_python",
     phony: true,
-    dependencies: [sdk_python_build],
+    dependencies: [make_build_python],
   };
-  const sdk_go_gen: Target = {
-    name: "sdk/go/.gen.sentinel",
+  const make_gen_go: Target = {
+    name: ".make/gen_go",
     autoTouch: true,
     dependencies: [bin_tfgen, "$(OVERLAYS_GO)"],
-    commands: ["bin/$(TFGEN) go --out sdk/go/"],
+    commands: ["rm -rf sdk/go", "bin/$(TFGEN) go --out sdk/go/"],
+  };
+  const make_build_go: Target = {
+    name: ".make/build_go",
+    autoTouch: true,
+    dependencies: [make_gen_go],
+    commands: [
+      [
+        `cd sdk`,
+        // The following pulls out the `module` line from go.mod to determine the right
+        // module prefix path for the SDK (including versions etc.), then runs a `go list`
+        // to determine all packages under the SDK. Finally, this issues a go build on all
+        // the packages discovered.
+        `go list \`grep -e "^module" go.mod | cut -d ' ' -f 2\`/go/... | xargs go build`,
+      ],
+    ],
   };
   const build_go: Target = {
     name: "build_go",
     phony: true,
-    dependencies: [sdk_go_gen],
-    commands: [
-      // The following pulls out the `module` line from go.mod to determine the right
-      // module prefix path for the SDK (including versions etc.), then runs a `go list`
-      // to determine all packages under the SDK. Finally, this issues a go build on all
-      // the packages discovered.
-      `cd sdk && go list \`grep -e "^module" go.mod | cut -d ' ' -f 2\`/go/... | xargs go build`,
-    ],
+    dependencies: [make_build_go],
   };
-  const sdk_dotnet_gen: Target = {
-    name: "sdk/dotnet/.gen.sentinel",
+  const make_gen_dotnet: Target = {
+    name: ".make/gen_dotnet",
     autoTouch: true,
     dependencies: [bin_tfgen, "$(OVERLAYS_DOTNET)"],
     commands: [
+      "rm -rf sdk/dotnet",
       "bin/$(TFGEN) dotnet --out sdk/dotnet/",
       'echo "module fake_dotnet_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/dotnet/go.mod',
       'echo "$(VERSION_DOTNET)" > sdk/dotnet/version.txt',
     ],
   };
-  const sdk_dotnet_build: Target = {
-    name: "sdk/dotnet/.build.sentinel",
+  const make_build_dotnet: Target = {
+    name: ".make/build_dotnet",
     autoTouch: true,
-    dependencies: [sdk_dotnet_gen],
+    dependencies: [make_gen_dotnet],
     commands: [["cd sdk/dotnet/", "dotnet build /p:Version=$(VERSION_DOTNET)"]],
   };
   const build_dotnet: Target = {
     name: "build_dotnet",
     phony: true,
-    dependencies: [sdk_dotnet_build],
+    dependencies: [make_build_dotnet],
   };
   const bin_pulumi_java_gen: Target = {
     name: "bin/pulumi-java-gen",
@@ -260,28 +291,26 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
       "$(shell bin/pulumictl download-binary -n pulumi-language-java -v $(shell cat .version.javagen.txt) -r pulumi/pulumi-java)",
     ],
   };
-  const sdk_java_gen: Target = {
-    name: "sdk/java/.gen.sentinel",
+  const make_gen_java: Target = {
+    name: ".make/gen_java",
     autoTouch: true,
     dependencies: [bin_pulumi_java_gen],
     commands: [
+      "rm -rf sdk/java",
       "bin/pulumi-java-gen generate --schema provider/cmd/$(PROVIDER)/schema.json --out sdk/java  --build gradle-nexus",
-      [
-        "cd sdk/java",
-        'echo "module fake_java_module // Exclude this directory from Go tools\\n\\ngo 1.17" > go.mod',
-      ],
+      'echo "module fake_java_module // Exclude this directory from Go tools\\n\\ngo 1.17" > sdk/java/go.mod',
     ],
   };
-  const sdk_java_build: Target = {
-    name: "sdk/java/.build.sentinel",
+  const make_build_java: Target = {
+    name: ".make/build_java",
     autoTouch: true,
-    dependencies: [sdk_java_gen],
+    dependencies: [make_gen_java],
     commands: [["cd sdk/java", "gradle --console=plain build"]],
   };
   const build_java: Target = {
     name: "build_java",
     phony: true,
-    dependencies: [sdk_java_build],
+    dependencies: [make_build_java],
   };
   const build_sdks: Target = {
     name: "build_sdks",
@@ -303,7 +332,11 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
   const cleanup: Target = {
     name: "cleanup",
     phony: true,
-    commands: ["rm -r bin", "rm -f provider/cmd/$(PROVIDER)/schema.go"],
+    commands: [
+      "rm -r bin",
+      "rm -rf .make",
+      "rm -f provider/cmd/$(PROVIDER)/schema.go",
+    ],
   };
   const help: Target = {
     name: "help",
@@ -319,8 +352,8 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     phony: true,
     commands: ["rm -rf sdk/{dotnet,nodejs,go,python}"],
   };
-  const sdk_dotnet_install: Target = {
-    name: "sdk/dotnet/.install.sentinel",
+  const make_install_dotnet_sdk: Target = {
+    name: ".make/install_dotnet_sdk",
     autoTouch: true,
     commands: [
       "mkdir -p nuget",
@@ -330,7 +363,7 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
   const install_dotnet_sdk: Target = {
     name: "install_dotnet_sdk",
     phony: true,
-    dependencies: [sdk_dotnet_install],
+    dependencies: [make_install_dotnet_sdk],
   };
   const install_python_sdk: Target = {
     name: "install_python_sdk",
@@ -341,15 +374,15 @@ export function bridgedProviderV2(config: BridgedConfig): Makefile {
     phony: true,
   };
   const install_go_sdk: Target = { name: "install_go_sdk", phony: true };
-  const sdk_nodejs_install: Target = {
-    name: "sdk/nodejs/.install.sentinel",
+  const make_install_nodejs_sdk: Target = {
+    name: ".make/install_nodejs_sdk",
     autoTouch: true,
     commands: ["yarn link --cwd sdk/nodejs/bin"],
   };
   const install_nodejs_sdk: Target = {
     name: "install_nodejs_sdk",
     phony: true,
-    dependencies: [sdk_nodejs_install],
+    dependencies: [make_install_nodejs_sdk],
   };
   const install_sdks: Target = {
     name: "install_sdks",
