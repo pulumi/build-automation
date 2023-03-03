@@ -1,21 +1,33 @@
-# Automate Pulumi Provider Build File Generation
+# Automate Pulumi Provider Build Setup
 
-Automation to keep Github Actions workflows up to date for Pulumi &amp; third-party
-repositories.
+Automation to keep the build setup up to date for Pulumi &amp; third-party
+repositories:
+
+* Makefiles
+* Github Actions workflows
+* Linting setup
 
 The initial code in this repository is migrated from [pulumi/ci-mgmt](https://github.com/pulumi/ci-mgmt)
 and updated to be reusable for third parties like Pulumiverse, partners, etc. Most changes after the
 initial migration are aimed at a broader reuse of what is in this package.
 
-## Structure
+## Provided Actions
 
-This repository is set up as an NPM workspace, with the folders mapping to a published package on NPM:
+This repository is set up as a monorepo containing multiple Github Actions. 
+Here is an overview of the different actions:
 
-| Package Folder | Published Package |
+| Action | Description |
 | --- | --- |
-| [packages/config](packages/config/) | [@pulumi/build-config](https://www.npmjs.com/package/@pulumi/build-config) |
-| [packages/workflows](packages/config/) | [@pulumi/github-workflows](https://www.npmjs.com/package/@pulumi/github-workflows) |
+| [update-workflows](update-workflows/) | [@pulumi/github-workflows](https://www.npmjs.com/package/@pulumi/github-workflows) |
 
-## Contributing
+## Supporting code
 
-1. `npm install` - installs modules for all workspaces
+All the code backing the different Actions can be found in these folders:
+
+| Folder | Description |
+| --- | --- |
+| [src](src/) | the Typescript code for *all* Github Actions living in this repository. |
+| [lib](lib/) | the transpiled Javascript code for *all* Github Actions living in this repository. |
+
+**NOTE:** Github Actions are always downloaded from Github repositories rather than NPM packages. As a result, the transpiled
+code must always be committed to this repository.
