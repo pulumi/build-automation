@@ -9,6 +9,8 @@ To speed up testing, we build upon the following to allow local testing:
 
 * `uses: ./<action-name>`: use this line in a test workflow to use your locally built action sources.
 * [mock-github](https://github.com/kiegroup/mock-github): A library to create a local github environment and easily mock github APIs using an octokit like interface 
+  * provides a mock Github API in case some steps need to communicate with it
+  * provides the setup of local git repos to test the actions on it
 * [act-js](https://github.com/kiegroup/act-js): A node.js wrapper for [nektos/act](https://github.com/nektos/act) to programmatically run your github actions locally 
 * [Jest](https://jestjs.io/): a Javascript test framework. 
 
