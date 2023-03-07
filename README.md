@@ -28,6 +28,7 @@ All the code backing the different Actions can be found in these folders:
 | --- | --- |
 | [src](src/) | the Typescript code for *all* Github Actions living in this repository. |
 | [lib](lib/) | the transpiled Javascript code for *all* Github Actions living in this repository. |
+| [test](test/) | unit & integration tests for the set of Github Actions. |
 
 **NOTE:** Github Actions are always downloaded from Github repositories rather than NPM packages. As a result, the transpiled
 code must always be committed to this repository.
