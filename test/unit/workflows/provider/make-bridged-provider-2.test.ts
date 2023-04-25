@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
-import { render } from "../../../src/workflows/provider/make";
-import { bridgedProviderV2 } from "../../../src/workflows/provider/make-bridged-provider-2";
+import { render } from "@pulumi/workflows/provider/make";
+import { bridgedProviderV2 } from "@pulumi/workflows/provider/make-bridged-provider-2";
 
 test("Makefile snapshot", () => {
   const makefile = render(

@@ -50,12 +50,7 @@
     "build": "tsc",
     "gen-config-schema": "ts-node cmd/generate-config-schema.ts",
     "discovery": "wget https://json.schemastore.org/github-workflow.json -O github-workflow.json && json2ts -i github-workflow.json -o src/provider/github-workflow.d.ts --unreachableDefinitions --ignoreMinAndMaxItems",
-    "test": "jest"
-  },
-  "jest": {
-    "testPathIgnorePatterns": [
-      "/dist/"
-    ]
+    "test": "jest unit/"
   },
   "volta": {
     "node": "16.15.0"
