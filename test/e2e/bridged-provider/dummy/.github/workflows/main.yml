@@ -1,0 +1,30 @@
+name: main
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'dependabot/**'
+    tags-ignore:
+      - v*
+  workflow_dispatch:
+
+jobs:
+  prerequisites:
+    uses: ./.github/workflows/provider-prerequisites.yaml
+    with:
+      provider: heroku
+      dotnetversion: 6.0
+      goversion: 1.19.x
+      nodeversion: 16.x
+      pythonversion: "3.9"
+  build:
+    needs: prerequisites
+    uses: ./.github/workflows/provider-build-sdk.yaml
+    with:
+      provider: heroku
+      dotnetversion: 6.0
+      goversion: 1.19.x
+      nodeversion: 16.x
+      pythonversion: "3.9"
